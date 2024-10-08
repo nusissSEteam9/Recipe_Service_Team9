@@ -1,5 +1,6 @@
 package nus.iss.se.team9.recipe_service_team9.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 
 import java.time.LocalDate;
@@ -16,8 +17,10 @@ public class Review {
 	@Column
 	private LocalDate reviewDate;
 	@ManyToOne
+	@JsonBackReference
 	private Member member;
 	@ManyToOne
+	@JsonBackReference
 	private Recipe recipe;
 	
 	public Review() {

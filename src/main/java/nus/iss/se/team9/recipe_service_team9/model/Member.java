@@ -1,6 +1,9 @@
 package nus.iss.se.team9.recipe_service_team9.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
+import org.springframework.context.annotation.Configuration;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -40,15 +43,19 @@ public class Member extends User{
 	}
 	
 	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
+	@JsonManagedReference
 	private List<ShoppingListItem> shoppingList;
 	
 	@ManyToMany(mappedBy = "membersWhoSave")
+	@JsonIgnore
 	private List<Recipe> savedRecipes;
 	
 	@OneToMany(mappedBy = "member")
+	@JsonManagedReference
 	private List<Recipe> addedRecipes;
 	
 	@OneToMany(mappedBy = "member")
+	@JsonManagedReference
 	private List<Review> reviews;
 	
 	@OneToMany(mappedBy = "member")

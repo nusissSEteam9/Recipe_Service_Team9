@@ -24,6 +24,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'jakarta.validation:jakarta.validation-api:3.0.0'
+	implementation group: 'com.mysql', name: 'mysql-connector-j', version: '9.0.0'
 }
 
 tasks.named('test') {

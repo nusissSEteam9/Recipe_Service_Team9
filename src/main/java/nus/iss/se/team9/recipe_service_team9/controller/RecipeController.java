@@ -17,10 +17,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -82,13 +79,13 @@ public class RecipeController {
 
     @PostMapping("/search")
     public ResponseEntity<Map<String, Object>> searchRecipe(
-            @RequestParam("query") String query,
-            @RequestParam("searchtype") String type,
+            @RequestParam(value = "query", required = false, defaultValue = "") String query,
+            @RequestParam(value = "searchtype", required = false, defaultValue = "") String type,
             @RequestParam(name = "filter1", defaultValue = "false") boolean filter1,
             @RequestParam(name = "filter2", defaultValue = "false") boolean filter2,
             HttpSession sessionObj,
             @RequestParam(defaultValue = "0") int pageNo,
-            @RequestParam(defaultValue = "12") int pageSize) {
+            @RequestParam(defaultValue = "8") int pageSize) {
 
         List<Recipe> results = switch (type) {
             case "tag" -> recipeService.searchByTag(query);
@@ -98,35 +95,35 @@ public class RecipeController {
         };
 
         // Filter results
-    List<Recipe> filteredResults = results;
-		if (filter1) {
-        filteredResults = results.stream().filter(r -> r.getHealthScore() >= 4).collect(Collectors.toList());
-    }
-		if (filter2) {
-        Integer memberId = (Integer) sessionObj.getAttribute("userId");
-        if (memberId == null) {
-            return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+        List<Recipe> filteredResults = results;
+        if (filter1) {
+            filteredResults = results.stream().filter(r -> r.getHealthScore() >= 4).collect(Collectors.toList());
         }
-        Member member = userService.getMemberById(memberId);
-        Double calorieIntake = member.getCalorieIntake();
-        if (calorieIntake == null) {
-            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        if (filter2) {
+            Integer memberId = (Integer) sessionObj.getAttribute("userId");
+            if (memberId == null) {
+                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+            }
+            Member member = userService.getMemberById(memberId);
+            Double calorieIntake = member.getCalorieIntake();
+            if (calorieIntake == null) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            filteredResults = results.stream().filter(r -> r.getCalories() <= (calorieIntake / 3))
+                    .collect(Collectors.toList());
         }
-        filteredResults = results.stream().filter(r -> r.getCalories() <= (calorieIntake / 3))
-                .collect(Collectors.toList());
-    }
 
-    int totalRecipes = filteredResults.size();
-    int startIndex = pageNo * pageSize;
-    int endIndex = Math.min(startIndex + pageSize, totalRecipes);
-    int totalPages = (totalRecipes + pageSize - 1) / pageSize;
+        int totalRecipes = filteredResults.size();
+        int startIndex = pageNo * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalRecipes);
+        int totalPages = (totalRecipes + pageSize - 1) / pageSize;
 
-    Map<String, Object> response = new HashMap<>();
-		response.put("currentPage", pageNo);
-		response.put("totalPages", totalPages);
-		response.put("pageSize", pageSize);
-		response.put("results", filteredResults.subList(startIndex, endIndex));
-		return ResponseEntity.ok(response);
+        Map<String, Object> response = new HashMap<>();
+        response.put("currentPage", pageNo);
+        response.put("totalPages", totalPages);
+        response.put("pageSize", pageSize);
+        response.put("results", filteredResults.subList(startIndex, endIndex));
+        return ResponseEntity.ok(response);
     }
 
 
@@ -206,12 +203,37 @@ public class RecipeController {
     }
 
     @GetMapping("/detail/{id}")
-    public ResponseEntity<Recipe> viewRecipe(@PathVariable("id") Integer id, HttpSession sessionObj) {
+    public ResponseEntity<Map<String, Object>> viewRecipe(@PathVariable("id") Integer id, HttpSession sessionObj) {
         Recipe recipe = recipeService.getRecipeById(id);
         if (recipe.getStatus() == Status.DELETED) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return ResponseEntity.ok(recipe);
+        String createdBy = recipe.getMember().getUsername();
+        Integer createdByUserId = recipe.getMember().getId();
+        Map<String, Object> response = new HashMap<>();
+        response.put("recipe", recipe);
+        response.put("createdBy", createdBy);
+        response.put("createdByUserId", createdByUserId);
+        List<Map<String, Object>> reviewList = new ArrayList<>();
+        for (Review review : recipe.getReviews()) {
+            Map<String, Object> reviewData = new HashMap<>();
+            reviewData.put("id", review.getId());
+            reviewData.put("rating", review.getRating());
+            reviewData.put("comment", review.getComment());
+            reviewData.put("reviewDate", review.getReviewDate());
+
+            // 添加评论人的 id 和 username
+            if (review.getMember() != null) {
+                reviewData.put("memberId", review.getMember().getId());
+                reviewData.put("memberUsername", review.getMember().getUsername());
+            } else {
+                reviewData.put("memberId", null);
+                reviewData.put("memberUsername", "Unknown");
+            }
+            reviewList.add(reviewData);
+        }
+        response.put("reviews", reviewList);
+        return ResponseEntity.ok(response);
     }
 
     public void setRecipeNutrients(Recipe recipe) {

@@ -1,5 +1,7 @@
 package nus.iss.se.team9.recipe_service_team9.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -65,18 +67,28 @@ public class Recipe {
 	private List<String> steps;
 
 	@ManyToMany(mappedBy = "recipes")
+	@JsonManagedReference
 	private List<Ingredient> ingredients;
 	@ElementCollection
 	private List<String> tags;
 
 	@OneToMany(mappedBy = "recipe")
+	@JsonManagedReference
 	private List<Review> reviews;
 	@OneToMany(mappedBy = "recipeReported")
 	private List<RecipeReport> recipesToReport;
 
 	@ManyToOne
+	@JoinColumn(name = "member_id")
+	@JsonBackReference
 	private Member member;
 	@ManyToMany
+	@JoinTable(
+			name = "recipe_members_who_save",
+			joinColumns = @JoinColumn(name = "saved_recipes_id"),
+			inverseJoinColumns = @JoinColumn(name = "members_who_save_id")
+	)
+	@JsonBackReference
 	private List<Member> membersWhoSave;
 	
 	public Recipe() {
