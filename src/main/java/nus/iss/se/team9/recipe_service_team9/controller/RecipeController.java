@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -126,36 +127,80 @@ public class RecipeController {
         return ResponseEntity.ok(response);
     }
 
-
     @PostMapping("/create")
-    public ResponseEntity<String> addRecipe(@Valid @ModelAttribute("recipe") Recipe recipe,
-                                            BindingResult bindingResult,
-                                            @RequestParam("timeUnit") String timeUnit,
-                                            @RequestParam("pictureInput") MultipartFile pictureFile,
-                                            @RequestParam("ingredientIds") String ingredientIds,
-                                            HttpSession sessionObj) {
+    public ResponseEntity<String> createRecipe(@RequestBody Map<String, Object> payload){
+        try{
+            String name = (String) payload.get("name");
+            String description = (String) payload.get("description");
+            Integer servings = (Integer) payload.get("servings");
+            Integer preparationTime = (Integer) payload.get("preparationTime");
+            String notes = (String) payload.get("notes");
+            String statusStr = (String) payload.get("status");
+            String image = (String) payload.get("image");
+            Status status = Status.valueOf(statusStr.toUpperCase());
 
-        if (bindingResult.hasErrors()) {
-            return new ResponseEntity<>("Binding error at recipe creation", HttpStatus.BAD_REQUEST);
+            Recipe recipe = new Recipe();
+            recipe.setName(name);
+            recipe.setDescription(description);
+            recipe.setServings(servings);
+            recipe.setPreparationTime(preparationTime);
+            recipe.setNotes(notes);
+            recipe.setStatus(status);
+            recipe.setImage(image);
+            recipe.setMember(userService.getMemberById(1));//修改为JWT来获取用户信息
+
+            List<String> steps = (List<String>) payload.get("steps");
+            recipe.setSteps(steps);
+            recipe.setNumberOfSteps(steps.size());
+
+            List<String> tags = (List<String>) payload.get("tags");
+            recipe.setTags(tags);
+
+            recipeService.createRecipe(recipe);
+
+            List<Map<String, Object>> ingredientsPayload = (List<Map<String, Object>>) payload.get("ingredients");
+            List<Map<String, Object>> nutritionPayload = (List<Map<String, Object>>) payload.get("nutrition");
+            List<Ingredient> ingredients = new ArrayList<>();
+            List<Integer> ingredientIds = new ArrayList<>();
+            for (int i = 0; i < ingredientsPayload.size(); i++) {
+                Map<String, Object> ingredientData = ingredientsPayload.get(i);
+                String ingredientName = (String) ingredientData.get("name");
+                Integer quantity = Integer.valueOf(ingredientData.get("quantity").toString());
+                String unit = (String) ingredientData.get("unit");
+
+                Map<String, Object> nutritionData = nutritionPayload.get(i);
+                double calories = handleNutritionData(nutritionData.get("calories"));
+                double carbohydrate = handleNutritionData(nutritionData.get("carbohydrate"));
+                double fat = handleNutritionData(nutritionData.get("fat"));
+                double protein = handleNutritionData(nutritionData.get("protein"));
+                double saturatedFat = handleNutritionData(nutritionData.get("saturatedFat"));
+                double sodium = handleNutritionData(nutritionData.get("sodium"));
+                double sugar = handleNutritionData(nutritionData.get("sugar"));
+
+                Ingredient ingredient = new Ingredient(ingredientName + " " + quantity.toString() + unit, protein, calories, carbohydrate, sugar, sodium, fat, saturatedFat);
+                ingredientService.saveIngredient(ingredient);
+                ingredientIds.add(ingredient.getId());
+                ingredients.add(ingredient);
+            }
+            handleIngredientIds(ingredientIds, recipe);
+            recipe.setIngredients(ingredients);
+            setRecipeNutrients(recipe);
+            recipe.setHealthScore(recipe.calculateHealthScore());
+            recipeService.createRecipe(recipe);
+            return ResponseEntity.ok("Recipe created successfully");
+        }catch (Exception e){
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating recipe: " + e.getMessage());
         }
+    }
 
-        // If preparation time entered in hours, convert to mins
-        if (timeUnit.equals("hours")) {
-            int preparationTime = recipe.getPreparationTime();
-            recipe.setPreparationTime(preparationTime * 60);
+    private double handleNutritionData(Object nutritionData) {
+        if (nutritionData instanceof Integer) {
+            return ((Integer) nutritionData).doubleValue();
+        } else if (nutritionData instanceof Double) {
+            return (Double) nutritionData;
+        }else {
+            return 0.0;
         }
-
-        // Set the image and ingredients
-        handleImageUpload(pictureFile, recipe);
-        handleIngredientIds(ingredientIds, recipe);
-
-        Member member = userService.getMemberById((Integer) sessionObj.getAttribute("userId"));
-        recipe.setMember(member);
-
-        setRecipeNutrients(recipe);
-        recipe.setHealthScore(recipe.calculateHealthScore());
-        recipeService.createRecipe(recipe);
-        return ResponseEntity.ok("Recipe created successfully");
     }
 
     private void handleImageUpload(MultipartFile pictureFile, Recipe recipe) {
@@ -176,15 +221,12 @@ public class RecipeController {
         }
     }
 
-    private void handleIngredientIds(String ingredientIds, Recipe recipe) {
-        List<Ingredient> ingredients = recipe.getIngredients();
-        String[] ingredientsToAdd = ingredientIds.split(",");
-        for (String ingredientId : ingredientsToAdd) {
-            if (!ingredientId.isEmpty()) {
-                Ingredient ingredient = ingredientService.getIngredientById(Integer.parseInt(ingredientId));
+    private void handleIngredientIds(List<Integer> ingredientIds, Recipe recipe) {
+        for (Integer ingredientId : ingredientIds) {
+            if (!ingredientId.equals(0)) {
+                Ingredient ingredient = ingredientService.getIngredientById(ingredientId);
                 ingredient.getRecipes().add(recipe);
                 ingredientService.saveIngredient(ingredient);
-                ingredients.add(ingredient);
             }
         }
     }
