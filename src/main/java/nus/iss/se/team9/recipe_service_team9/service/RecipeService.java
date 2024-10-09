@@ -16,13 +16,9 @@ import java.util.stream.Stream;
 @Transactional
 public class RecipeService {
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
     private MemberRepository memberRepository;
     @Autowired
     private RecipeRepository recipeRepository;
-    @Autowired
-    private RecipeReportRepository recipeReportRepository;
 
     // get specific recipe by id
     public Recipe getRecipeById(Integer id) {

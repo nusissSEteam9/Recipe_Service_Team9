@@ -1,7 +1,6 @@
 package nus.iss.se.team9.recipe_service_team9.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import nus.iss.se.team9.recipe_service_team9.model.*;
 import nus.iss.se.team9.recipe_service_team9.service.*;
@@ -28,6 +27,8 @@ import java.util.stream.Collectors;
 @RequestMapping("/recipe")
 public class RecipeController {
     @Autowired
+    private JwtService jwtService;
+    @Autowired
     private RecipeService recipeService;
     @Autowired
     private UserService userService;
@@ -41,23 +42,23 @@ public class RecipeController {
     }
 
     @PostMapping("/save/{id}")
-    public ResponseEntity<String> saveRecipe(@PathVariable Integer id, HttpSession sessionObj) {
+    public ResponseEntity<String> saveRecipe(@PathVariable Integer id,@RequestHeader("Authorization") String token) {
         Recipe recipe = recipeService.getRecipeById(id);
-        Member member = userService.getMemberById((int) sessionObj.getAttribute("userId"));
+        Member member = userService.getMemberById(jwtService.extractId(token));
         recipeService.saveRecipe(recipe, member);
         return ResponseEntity.ok("Recipe saved successfully");
     }
 
     @PostMapping("/unsubscribe/{id}")
-    public ResponseEntity<String> unsubscribeRecipe(@PathVariable Integer id, HttpSession sessionObj) {
+    public ResponseEntity<String> unsubscribeRecipe(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
         Recipe recipe = recipeService.getRecipeById(id);
-        Member member = userService.getMemberById((int) sessionObj.getAttribute("userId"));
+        Member member = userService.getMemberById(jwtService.extractId(token));
         recipeService.unsubscribeRecipe(recipe, member);
         return ResponseEntity.ok("Unsubscribed from recipe successfully");
     }
 
     @GetMapping("/review/{id}")
-    public ResponseEntity<Review> reviewRecipe(@PathVariable Integer id, HttpSession sessionObj) {
+    public ResponseEntity<Review> reviewRecipe(@PathVariable Integer id) {
         Recipe recipe = recipeService.getRecipeById(id);
         Review review = new Review();
         review.setRecipe(recipe);
@@ -86,7 +87,7 @@ public class RecipeController {
             @RequestParam("searchtype") String type,
             @RequestParam(name = "filter1", defaultValue = "false") boolean filter1,
             @RequestParam(name = "filter2", defaultValue = "false") boolean filter2,
-            HttpSession sessionObj,
+            @RequestHeader("Authorization") String token,
             @RequestParam(defaultValue = "0") int pageNo,
             @RequestParam(defaultValue = "12") int pageSize) {
 
@@ -103,7 +104,7 @@ public class RecipeController {
         filteredResults = results.stream().filter(r -> r.getHealthScore() >= 4).collect(Collectors.toList());
     }
 		if (filter2) {
-        Integer memberId = (Integer) sessionObj.getAttribute("userId");
+        Integer memberId = jwtService.extractId(token);
         if (memberId == null) {
             return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
         }
@@ -136,7 +137,8 @@ public class RecipeController {
                                             @RequestParam("timeUnit") String timeUnit,
                                             @RequestParam("pictureInput") MultipartFile pictureFile,
                                             @RequestParam("ingredientIds") String ingredientIds,
-                                            HttpSession sessionObj) {
+                                            @RequestHeader("Authorization") String token
+                                            ) {
 
         if (bindingResult.hasErrors()) {
             return new ResponseEntity<>("Binding error at recipe creation", HttpStatus.BAD_REQUEST);
@@ -152,7 +154,7 @@ public class RecipeController {
         handleImageUpload(pictureFile, recipe);
         handleIngredientIds(ingredientIds, recipe);
 
-        Member member = userService.getMemberById((Integer) sessionObj.getAttribute("userId"));
+        Member member = userService.getMemberById(jwtService.extractId(token));
         recipe.setMember(member);
 
         setRecipeNutrients(recipe);
@@ -206,7 +208,7 @@ public class RecipeController {
     }
 
     @GetMapping("/detail/{id}")
-    public ResponseEntity<Recipe> viewRecipe(@PathVariable("id") Integer id, HttpSession sessionObj) {
+    public ResponseEntity<Recipe> viewRecipe(@PathVariable("id") Integer id) {
         Recipe recipe = recipeService.getRecipeById(id);
         if (recipe.getStatus() == Status.DELETED) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

@@ -13,16 +13,7 @@ import java.util.Optional;
 public class UserService {
 
     @Autowired
-    private UserRepository userRepository;
-    @Autowired
     private MemberRepository memberRepository;
-    @Autowired
-    private RecipeRepository recipeRepository;
-    @Autowired
-    private RecipeReportRepository recipeReportRepository;
-
-    @Autowired
-    private MemberReportRepository memberReportRepository;
     // Searching and Filtering methods
     public Member getMemberById(Integer id) {
         Optional<Member> member = memberRepository.findById(id);
