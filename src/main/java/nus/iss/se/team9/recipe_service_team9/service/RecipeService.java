@@ -20,6 +20,15 @@ public class RecipeService {
     @Autowired
     private RecipeRepository recipeRepository;
 
+    public void save(Recipe recipe){
+        recipeRepository.save(recipe);
+    }
+
+    public void delete(Recipe recipe){
+        recipe.setStatus(Status.DELETED);
+        recipeRepository.save(recipe);
+    }
+
     // get specific recipe by id
     public Recipe getRecipeById(Integer id) {
         Optional<Recipe> recipe = recipeRepository.findById(id);
@@ -97,6 +106,42 @@ public class RecipeService {
 
     public void updateRecipe(Recipe newRecipe) {
         recipeRepository.save(newRecipe);
+    }
+
+
+    public List<Recipe> getAllRecipesByYear(int year) {
+        return recipeRepository.getAllRecipesByYear(year);
+    }
+
+    public List<Object[]> getRecipeCountByTag() {
+        return recipeRepository.getRecipeCountByTag();
+    }
+
+    public List<Recipe> getRecipesByOrder(String orderBy, String order) {
+        List<Recipe> recipes = new ArrayList<>();
+        if (orderBy.equals("rating")) {
+            if (order.equals("asc")) {
+                recipes = recipeRepository.findAllByOrderByRatingAsc();
+            } else if (order.equals("desc")) {
+                recipes = recipeRepository.findAllByOrderByRatingDesc();
+            }
+        } else if (orderBy.equals("numberOfSaved")) {
+            if (order.equals("asc")) {
+                recipes = recipeRepository.findAllByOrderByNumberOfSavedAsc();
+            } else if (order.equals("desc")) {
+                recipes = recipeRepository.findAllByOrderByNumberOfSavedDesc();
+            }
+        } else if (orderBy.equals("healthScore")) {
+            if (order.equals("asc")) {
+                recipes = recipeRepository.findAllByOrderByHealthScoreAsc();
+            } else if (order.equals("desc")) {
+                recipes = recipeRepository.findAllByOrderByHealthScoreDesc();
+            }
+        }
+        else {
+            recipes = recipeRepository.findAll();
+        }
+        return recipes;
     }
 
 

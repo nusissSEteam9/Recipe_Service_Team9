@@ -33,6 +33,47 @@ public class RecipeController {
     @Autowired
     private IngredientService ingredientService;
 
+    @GetMapping("/count-by-year/{year}")
+    public ResponseEntity<List<Recipe>> getAllRecipesByYear(@PathVariable int year) {
+        List<Recipe> recipes = recipeService.getAllRecipesByYear(year);
+        System.out.println("order by year");
+        return ResponseEntity.ok(recipes);
+    }
+
+    @GetMapping("/count-by-tag")
+    public ResponseEntity<List<Object[]>> getRecipeCountByTag() {
+        List<Object[]> recipeCounts = recipeService.getRecipeCountByTag();
+        System.out.println("order by tag");
+        return ResponseEntity.ok(recipeCounts);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Recipe>> getRecipesByOrder(
+            @RequestParam String orderBy, @RequestParam String order) {
+        List<Recipe> recipes = recipeService.getRecipesByOrder(orderBy, order);
+        return ResponseEntity.ok(recipes);
+    }
+
+    @DeleteMapping("/delete-by-member")
+    public ResponseEntity<Void> deleteRecipesByMember(@RequestBody Member member) {
+        List<Recipe> recipes = member.getAddedRecipes();
+        for (Recipe recipe : recipes) {
+            recipe.setStatus(Status.DELETED);
+            recipeService.save(recipe);
+        }
+        return ResponseEntity.noContent().build();
+    }
+    @DeleteMapping("/set-recipe-to-deleted/{id}")
+    public ResponseEntity<Void> deleteRecipeById(@PathVariable Integer id) {
+        Recipe recipe = recipeService.getRecipeById(id);
+        if (recipe != null) {
+            recipeService.delete(recipe);
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/getTags")
     public ResponseEntity<List<String>> getTags(@RequestParam("keyword") String keyword) {
         List<String> matchingTags = recipeService.findMatchingTags(keyword);
@@ -40,7 +81,7 @@ public class RecipeController {
     }
 
     @PostMapping("/save/{id}")
-    public ResponseEntity<String> saveRecipe(@PathVariable Integer id,@RequestHeader("Authorization") String token) {
+    public ResponseEntity<String> saveRecipe(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
         Recipe recipe = recipeService.getRecipeById(id);
         Member member = userService.getMemberById(jwtService.extractId(token));
         recipeService.saveRecipe(recipe, member);
