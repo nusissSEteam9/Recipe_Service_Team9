@@ -35,6 +35,10 @@ public class RecipeService {
         return recipe.orElse(null);
     };
 
+    public List<Recipe> getRecipesByMemberId(Integer memberId){
+        return recipeRepository.getRecipesByMemberId(memberId);
+    }
+
     public List<String> findMatchingTags(String keyword) {
         Set<String> allUniqueTags = getAllUniqueTags();
         return allUniqueTags.stream()

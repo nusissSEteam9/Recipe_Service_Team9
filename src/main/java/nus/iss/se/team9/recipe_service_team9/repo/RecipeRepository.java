@@ -46,4 +46,7 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
 	List<Recipe> findAllByOrderByHealthScoreAsc();
 
 	List<Recipe> findAllByOrderByHealthScoreDesc();
+
+	@Query("SELECT r FROM Recipe r WHERE r.member.id = :memberId")
+	List<Recipe> getRecipesByMemberId(@Param("memberId") Integer memberId);
 }

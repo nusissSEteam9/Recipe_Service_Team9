@@ -55,14 +55,17 @@ public class RecipeController {
     }
 
     @DeleteMapping("/delete-by-member")
-    public ResponseEntity<Void> deleteRecipesByMember(@RequestBody Member member) {
-        List<Recipe> recipes = member.getAddedRecipes();
+    public ResponseEntity<Void> deleteRecipesByMember(@RequestBody Integer memberId) {
+        System.out.println("Start to delete recipes");
+        List<Recipe> recipes = recipeService.getRecipesByMemberId(memberId);
+        System.out.println(recipes);
         for (Recipe recipe : recipes) {
             recipe.setStatus(Status.DELETED);
             recipeService.save(recipe);
         }
         return ResponseEntity.noContent().build();
     }
+
     @DeleteMapping("/set-recipe-to-deleted/{id}")
     public ResponseEntity<Void> deleteRecipeById(@PathVariable Integer id) {
         Recipe recipe = recipeService.getRecipeById(id);
