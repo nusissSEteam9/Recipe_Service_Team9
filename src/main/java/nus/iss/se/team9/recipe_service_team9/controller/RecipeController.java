@@ -33,6 +33,26 @@ public class RecipeController {
     @Autowired
     private IngredientService ingredientService;
 
+    @GetMapping("/{id}")
+    public ResponseEntity<Recipe> getRecipeById(@PathVariable("id") Integer id) {
+        Recipe recipe = recipeService.getRecipeById(id);
+        if (recipe == null || recipe.getStatus() == Status.DELETED) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        return ResponseEntity.ok(recipe);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRecipeById(@PathVariable Integer id) {
+        Recipe recipe = recipeService.getRecipeById(id);
+        if (recipe != null) {
+            recipeService.delete(recipe);
+            return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/count-by-year/{year}")
     public ResponseEntity<List<Recipe>> getAllRecipesByYear(@PathVariable int year) {
         List<Recipe> recipes = recipeService.getAllRecipesByYear(year);
@@ -66,14 +86,17 @@ public class RecipeController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/set-recipe-to-deleted/{id}")
-    public ResponseEntity<Void> deleteRecipeById(@PathVariable Integer id) {
-        Recipe recipe = recipeService.getRecipeById(id);
-        if (recipe != null) {
-            recipeService.delete(recipe);
-            return ResponseEntity.noContent().build();
-        } else {
-            return ResponseEntity.notFound().build();
+    @PutMapping("/setRating/{id}")
+    public ResponseEntity<String> updateRecipeRating(@PathVariable Integer id, @RequestBody Map<String, Object> request) {
+        try {
+            if (!request.containsKey("rating")) {
+                return ResponseEntity.badRequest().body("Rating value is missing");
+            }
+            double rating = (double) request.get("rating");
+            recipeService.updateRecipeRating(id, rating);
+            return ResponseEntity.ok("Recipe rating updated successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update recipe rating: " + e.getMessage());
         }
     }
 
@@ -105,6 +128,53 @@ public class RecipeController {
         Review review = new Review();
         review.setRecipe(recipe);
         return ResponseEntity.ok(review);
+    }
+
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> deleteRecipe(@PathVariable("id") Integer id) {
+        Recipe recipe = recipeService.getRecipeById(id);
+        List<Ingredient> ingredients = recipe.getIngredients();
+        for (Ingredient ingredient : ingredients) {
+            ingredient.getRecipes().remove(recipe);
+            ingredientService.saveIngredient(ingredient);
+        }
+        recipe.setStatus(Status.DELETED);
+        recipeService.updateRecipe(recipe);
+        return ResponseEntity.ok("Recipe deleted successfully");
+    }
+
+    @GetMapping("/detail/{id}")
+    public ResponseEntity<Map<String, Object>> viewRecipe(@PathVariable("id") Integer id) {
+        Recipe recipe = recipeService.getRecipeById(id);
+        if (recipe.getStatus() == Status.DELETED) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+        String createdBy = recipe.getMember().getUsername();
+        Integer createdByUserId = recipe.getMember().getId();
+        Map<String, Object> response = new HashMap<>();
+        response.put("recipe", recipe);
+        response.put("createdBy", createdBy);
+        response.put("createdByUserId", createdByUserId);
+        List<Map<String, Object>> reviewList = new ArrayList<>();
+        for (Review review : recipe.getReviews()) {
+            Map<String, Object> reviewData = new HashMap<>();
+            reviewData.put("id", review.getId());
+            reviewData.put("rating", review.getRating());
+            reviewData.put("comment", review.getComment());
+            reviewData.put("reviewDate", review.getReviewDate());
+
+            // 添加评论人的 id 和 username
+            if (review.getMember() != null) {
+                reviewData.put("memberId", review.getMember().getId());
+                reviewData.put("memberUsername", review.getMember().getUsername());
+            } else {
+                reviewData.put("memberId", null);
+                reviewData.put("memberUsername", "Unknown");
+            }
+            reviewList.add(reviewData);
+        }
+        response.put("reviews", reviewList);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/search/{tag}")
@@ -273,53 +343,6 @@ public class RecipeController {
                 ingredientService.saveIngredient(ingredient);
             }
         }
-    }
-
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteRecipe(@PathVariable("id") Integer id) {
-        Recipe recipe = recipeService.getRecipeById(id);
-        List<Ingredient> ingredients = recipe.getIngredients();
-        for (Ingredient ingredient : ingredients) {
-            ingredient.getRecipes().remove(recipe);
-            ingredientService.saveIngredient(ingredient);
-        }
-        recipe.setStatus(Status.DELETED);
-        recipeService.updateRecipe(recipe);
-        return ResponseEntity.ok("Recipe deleted successfully");
-    }
-
-    @GetMapping("/detail/{id}")
-    public ResponseEntity<Map<String, Object>> viewRecipe(@PathVariable("id") Integer id) {
-        Recipe recipe = recipeService.getRecipeById(id);
-        if (recipe.getStatus() == Status.DELETED) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-        String createdBy = recipe.getMember().getUsername();
-        Integer createdByUserId = recipe.getMember().getId();
-        Map<String, Object> response = new HashMap<>();
-        response.put("recipe", recipe);
-        response.put("createdBy", createdBy);
-        response.put("createdByUserId", createdByUserId);
-        List<Map<String, Object>> reviewList = new ArrayList<>();
-        for (Review review : recipe.getReviews()) {
-            Map<String, Object> reviewData = new HashMap<>();
-            reviewData.put("id", review.getId());
-            reviewData.put("rating", review.getRating());
-            reviewData.put("comment", review.getComment());
-            reviewData.put("reviewDate", review.getReviewDate());
-
-            // 添加评论人的 id 和 username
-            if (review.getMember() != null) {
-                reviewData.put("memberId", review.getMember().getId());
-                reviewData.put("memberUsername", review.getMember().getUsername());
-            } else {
-                reviewData.put("memberId", null);
-                reviewData.put("memberUsername", "Unknown");
-            }
-            reviewList.add(reviewData);
-        }
-        response.put("reviews", reviewList);
-        return ResponseEntity.ok(response);
     }
 
     public void setRecipeNutrients(Recipe recipe) {

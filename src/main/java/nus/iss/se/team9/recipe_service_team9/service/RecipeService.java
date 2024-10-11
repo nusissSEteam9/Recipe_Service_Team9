@@ -6,6 +6,8 @@ import nus.iss.se.team9.recipe_service_team9.repo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -15,10 +17,14 @@ import java.util.stream.Stream;
 @Service
 @Transactional
 public class RecipeService {
+    private final RecipeRepository recipeRepository;
+    private final UserService userService;
+
     @Autowired
-    private MemberRepository memberRepository;
-    @Autowired
-    private RecipeRepository recipeRepository;
+    public RecipeService(RecipeRepository recipeRepository, UserService userService) {
+        this.recipeRepository = recipeRepository;
+        this.userService = userService;
+    }
 
     public void save(Recipe recipe){
         recipeRepository.save(recipe);
@@ -29,11 +35,18 @@ public class RecipeService {
         recipeRepository.save(recipe);
     }
 
+    public void updateRecipeRating(Integer recipeId, double rating) {
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found with ID: " + recipeId));
+        recipe.setRating(rating);
+        recipeRepository.save(recipe);
+    }
+
     // get specific recipe by id
     public Recipe getRecipeById(Integer id) {
         Optional<Recipe> recipe = recipeRepository.findById(id);
         return recipe.orElse(null);
-    };
+    }
 
     public List<Recipe> getRecipesByMemberId(Integer memberId){
         return recipeRepository.getRecipesByMemberId(memberId);
@@ -57,21 +70,27 @@ public class RecipeService {
 
     // save specific recipe by id
     public void saveRecipe(Recipe recipe, Member member) {
-        member.getSavedRecipes().add(recipe);
-        recipe.getMembersWhoSave().add(member);
-        recipe.setNumberOfSaved(recipe.getNumberOfSaved() + 1);
-        memberRepository.save(member);
-        recipeRepository.save(recipe);
+        ResponseEntity<String> response = userService.saveRecipeToMemberSavedList(member.getId(), recipe);
+        if (response.getStatusCode() == HttpStatus.OK) {
+            recipe.getMembersWhoSave().add(member);
+            recipe.setNumberOfSaved(recipe.getNumberOfSaved() + 1);
+            recipeRepository.save(recipe);
+        } else {
+            throw new RuntimeException("Failed to save recipe to member-api: " + response.getBody());
+        }
     }
 
     // unsubscribe specific recipe by id
     public void unsubscribeRecipe(Recipe recipe, Member member) {
-        member.getSavedRecipes().remove(recipe);
-        recipe.getMembersWhoSave().remove(member);
-        recipe.setNumberOfSaved(recipe.getNumberOfSaved() - 1);
-        memberRepository.save(member);
-        recipeRepository.save(recipe);
-
+        ResponseEntity<String> response = userService.removeRecipeFromMemberSavedList(member.getId(),recipe);
+        userService.removeRecipeFromMemberSavedList(member.getId(), recipe);
+        if (response.getStatusCode() == HttpStatus.OK) {
+            recipe.getMembersWhoSave().remove(member);
+            recipe.setNumberOfSaved(recipe.getNumberOfSaved() - 1);
+            recipeRepository.save(recipe);
+        } else {
+            throw new RuntimeException("Failed to save recipe to member-api: " + response.getBody());
+        }
     }
 
     public Page<Recipe> searchByTag(String tag, int pageNo, int pageSize) {
@@ -123,27 +142,29 @@ public class RecipeService {
 
     public List<Recipe> getRecipesByOrder(String orderBy, String order) {
         List<Recipe> recipes = new ArrayList<>();
-        if (orderBy.equals("rating")) {
-            if (order.equals("asc")) {
-                recipes = recipeRepository.findAllByOrderByRatingAsc();
-            } else if (order.equals("desc")) {
-                recipes = recipeRepository.findAllByOrderByRatingDesc();
+        switch (orderBy) {
+            case "rating" -> {
+                if (order.equals("asc")) {
+                    recipes = recipeRepository.findAllByOrderByRatingAsc();
+                } else if (order.equals("desc")) {
+                    recipes = recipeRepository.findAllByOrderByRatingDesc();
+                }
             }
-        } else if (orderBy.equals("numberOfSaved")) {
-            if (order.equals("asc")) {
-                recipes = recipeRepository.findAllByOrderByNumberOfSavedAsc();
-            } else if (order.equals("desc")) {
-                recipes = recipeRepository.findAllByOrderByNumberOfSavedDesc();
+            case "numberOfSaved" -> {
+                if (order.equals("asc")) {
+                    recipes = recipeRepository.findAllByOrderByNumberOfSavedAsc();
+                } else if (order.equals("desc")) {
+                    recipes = recipeRepository.findAllByOrderByNumberOfSavedDesc();
+                }
             }
-        } else if (orderBy.equals("healthScore")) {
-            if (order.equals("asc")) {
-                recipes = recipeRepository.findAllByOrderByHealthScoreAsc();
-            } else if (order.equals("desc")) {
-                recipes = recipeRepository.findAllByOrderByHealthScoreDesc();
+            case "healthScore" -> {
+                if (order.equals("asc")) {
+                    recipes = recipeRepository.findAllByOrderByHealthScoreAsc();
+                } else if (order.equals("desc")) {
+                    recipes = recipeRepository.findAllByOrderByHealthScoreDesc();
+                }
             }
-        }
-        else {
-            recipes = recipeRepository.findAll();
+            default -> recipes = recipeRepository.findAll();
         }
         return recipes;
     }

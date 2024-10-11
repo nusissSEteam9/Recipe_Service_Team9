@@ -11,23 +11,21 @@ import java.util.Optional;
 @Service
 @Transactional
 public class IngredientService {
+    private final IngredientRepository ingredientRepo;
+
     @Autowired
-    IngredientRepository ingredientRepo;
+    public IngredientService(IngredientRepository ingredientRepo) {
+        this.ingredientRepo = ingredientRepo;
+    }
 
     // get specific ingredient by id
     public Ingredient getIngredientById(Integer id) {
         Optional<Ingredient> ingredient = ingredientRepo.findById(id);
         return ingredient.orElse(null);
-    };
-
-    // get specific ingredient by foodText
-    public Ingredient getIngredientByfoodText(String foodText) {
-        Optional<Ingredient> ingredient = ingredientRepo.findByfoodText(foodText);
-        return ingredient.orElse(null);
-    };
+    }
 
     // save ingredient
-    public Ingredient saveIngredient(Ingredient ingredient) {
-        return ingredientRepo.save(ingredient);
+    public void saveIngredient(Ingredient ingredient) {
+        ingredientRepo.save(ingredient);
     }
 }
