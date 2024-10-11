@@ -48,4 +48,7 @@ public interface RecipeRepository extends JpaRepository<Recipe, Integer> {
 
 	@Query("SELECT r FROM Recipe r WHERE r.member.id = :memberId")
 	List<Recipe> getRecipesByMemberId(@Param("memberId") Integer memberId);
+
+	@Query("SELECT r FROM Recipe r WHERE r.member.id = :memberId AND r.status = :status")
+	List<Recipe> getRecipesByMemberIdAndStatus(Integer memberId, Status status);
 }

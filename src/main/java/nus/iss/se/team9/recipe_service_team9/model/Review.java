@@ -17,10 +17,10 @@ public class Review {
 	@Column
 	private LocalDate reviewDate;
 	@ManyToOne
-	@JsonBackReference
+	@JsonBackReference(value = "member-reviews")
 	private Member member;
 	@ManyToOne
-	@JsonBackReference
+	@JsonBackReference(value = "recipe-reviews")
 	private Recipe recipe;
 	
 	public Review() {

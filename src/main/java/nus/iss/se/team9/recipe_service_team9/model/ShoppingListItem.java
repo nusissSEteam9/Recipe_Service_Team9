@@ -8,13 +8,15 @@ public class ShoppingListItem {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
-	@ManyToOne
-	@JsonBackReference
-	private Member member;
 	@Column
 	private String ingredientName;
+	@Column
 	private boolean isChecked;
-	
+
+
+	@ManyToOne
+	@JsonBackReference(value = "member-shoppingList")
+	private Member member;
 	public ShoppingListItem() {}
 	
 	public ShoppingListItem(Member member, String ingredientName) {

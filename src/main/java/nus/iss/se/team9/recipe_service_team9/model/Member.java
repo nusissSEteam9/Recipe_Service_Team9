@@ -1,17 +1,20 @@
 package nus.iss.se.team9.recipe_service_team9.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import org.springframework.context.annotation.Configuration;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 
+@Setter
+@Getter
 @Entity
-public class Member extends User{
+public class Member extends User {
 	@Column
 	private Double height;
 	@Column
@@ -26,46 +29,38 @@ public class Member extends User{
 	private Double calorieIntake;
 	@Column
 	private LocalDate registrationDate;
-	
 	@Column
 	@Enumerated(EnumType.STRING)
 	private Status memberStatus;
-	
 	@ElementCollection
-	private List<String> prefenceList;
-	
-	public List<String> getPerfenceList() {
-		return prefenceList;
-	}
+	private List<String> preferenceList;
 
-	public void setPrefenceList(List<String> prefenceList) {
-		this.prefenceList = prefenceList;
-	}
-	
 	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
-	@JsonManagedReference
+	@JsonManagedReference(value = "member-shoppingList")
 	private List<ShoppingListItem> shoppingList;
-	
+
 	@ManyToMany(mappedBy = "membersWhoSave")
-	@JsonIgnore
+	@JsonBackReference(value = "members-savedRecipes")
 	private List<Recipe> savedRecipes;
-	
-	@OneToMany(mappedBy = "member")
-	@JsonManagedReference
+
+	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
+	@JsonManagedReference(value = "member-addedRecipes")
 	private List<Recipe> addedRecipes;
-	
-	@OneToMany(mappedBy = "member")
-	@JsonManagedReference
+
+	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
+	@JsonManagedReference (value = "member-reviews")
 	private List<Review> reviews;
-	
+
 	@OneToMany(mappedBy = "member")
+	@JsonManagedReference (value = "member-reports")
 	private List<Report> reports;
-	
+
 	@OneToMany(mappedBy = "memberReported")
+	@JsonManagedReference (value = "member-reportsToMember")
 	private List<MemberReport> reportsToMember;
-	
+
 	public Member() {}
-	
+
 	public Member(String username, String password, double height, double weight, LocalDate birthdate, String gender, String email) {
 		super(username, password);
 		this.height = height;
@@ -85,133 +80,19 @@ public class Member extends User{
 		this.setRegistrationDate(LocalDate.now());
 	}
 
-	public Double getHeight() {
-		return height;
-	}
-
-	public void setHeight(Double height) {
-		this.height = height;
-	}
-
-	public Double getWeight() {
-		return weight;
-	}
-
-	public void setWeight(Double weight) {
-		this.weight = weight;
-	}
-
-	public Integer getAge() {
-		return age;
-	}
-
-	public void setAge(Integer age) {
-		this.age = age;
-	}
-
-	public LocalDate getBirthdate() {
-		return birthdate;
-	}
-
-	public void setBirthdate(LocalDate birthdate) {
-		this.birthdate = birthdate;
-	}
-
-	public String getGender() {
-		return gender;
-	}
-
-	public void setGender(String gender) {
-		this.gender = gender;
-	}
-
-	public Double getCalorieIntake() {
-		return calorieIntake;
-	}
-
-	public void setCalorieIntake(Double calorieIntake) {
-		this.calorieIntake = calorieIntake;
-	}
-
-	public List<ShoppingListItem> getShoppingList() {
-		return shoppingList;
-	}
-
-	public void setShoppingList(List<ShoppingListItem> shoppingList) {
-		this.shoppingList = shoppingList;
-	}
-
-	public List<Recipe> getSavedRecipes() {
-		return savedRecipes;
-	}
-
-	public void setSavedRecipes(List<Recipe> savedRecipes) {
-		this.savedRecipes = savedRecipes;
-	}
-
-	public List<Recipe> getAddedRecipes() {
-		return addedRecipes;
-	}
-
-	public void setAddedRecipes(List<Recipe> addedRecipes) {
-		this.addedRecipes = addedRecipes;
-	}
-
-	public List<Review> getReviews() {
-		return reviews;
-	}
-
-	public void setReviews(List<Review> reviews) {
-		this.reviews = reviews;
-	}
-
-	public List<Report> getReports() {
-		return reports;
-	}
-
-	public void setReports(List<Report> reports) {
-		this.reports = reports;
-	}
-
-	public List<MemberReport> getReportsToMember() {
-		return reportsToMember;
-	}
-
-	public void setReportsToMember(List<MemberReport> reportsToMember) {
-		this.reportsToMember = reportsToMember;
-	}
-	
 	public int calculateAge() {
 		LocalDate curDate = LocalDate.now();
 		return Period.between(birthdate, curDate).getYears();
 	}
-	
+
 	public Double calculateCalorieIntake() {
-		//Using Harris-Benedict formula to calculate Basal Metabolic Rate
-		Double BMR = 0.0;
+		// Using Harris-Benedict formula to calculate Basal Metabolic Rate
+		double BMR = 0.0;
 		if (gender.equals("Male")) {
 			BMR = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
-		}
-		else {
+		} else {
 			BMR = 655 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
 		}
 		return (Math.round(BMR * 10) / 10.0);
 	}
-	
-	public Status getMemberStatus() {
-		return memberStatus;
-	}
-
-	public void setMemberStatus(Status memberStatus) {
-		this.memberStatus = memberStatus;
-	}
-
-	public LocalDate getRegistrationDate() {
-		return registrationDate;
-	}
-
-	public void setRegistrationDate(LocalDate registrationDate) {
-		this.registrationDate = registrationDate;
-	}
-	
 }

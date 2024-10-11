@@ -1,16 +1,13 @@
 package nus.iss.se.team9.recipe_service_team9.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
-import jakarta.validation.Valid;
 import nus.iss.se.team9.recipe_service_team9.model.*;
 import nus.iss.se.team9.recipe_service_team9.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -74,6 +71,27 @@ public class RecipeController {
         return ResponseEntity.ok(recipes);
     }
 
+    @GetMapping("/getPublicRecipesByMemberId/{id}")
+    public ResponseEntity<List<Recipe>> getRecipesByMember(@PathVariable("id") Integer id) {
+        List<Recipe> recipes = recipeService.getPublicRecipesByMemberId(id);
+        return ResponseEntity.ok(recipes);
+    }
+
+    @GetMapping("/getRecipeOwnerMemberId/{recipeId}")
+    public ResponseEntity<Integer> getRecipeOwnerMemberId(@PathVariable Integer recipeId) {
+        try {
+            Recipe recipe = recipeService.getRecipeById(recipeId);
+            if (recipe != null && recipe.getMember() != null) {
+                Integer memberId = recipe.getMember().getId();  // 获取 Member 的 ID
+                return ResponseEntity.ok(memberId);  // 返回 memberId
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
     @DeleteMapping("/delete-by-member")
     public ResponseEntity<Void> deleteRecipesByMember(@RequestBody Integer memberId) {
         System.out.println("Start to delete recipes");
@@ -104,6 +122,10 @@ public class RecipeController {
     public ResponseEntity<List<String>> getTags(@RequestParam("keyword") String keyword) {
         List<String> matchingTags = recipeService.findMatchingTags(keyword);
         return ResponseEntity.ok(matchingTags);
+    }
+    @GetMapping("/getAllUniqueTags")
+    public ResponseEntity<Set<String>> getAllUniqueTags() {
+        return ResponseEntity.ok(recipeService.getAllUniqueTags());
     }
 
     @PostMapping("/save/{id}")

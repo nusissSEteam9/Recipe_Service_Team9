@@ -48,6 +48,10 @@ public class RecipeService {
         return recipe.orElse(null);
     }
 
+    public List<Recipe> getPublicRecipesByMemberId(Integer memberId){
+        return recipeRepository.getRecipesByMemberIdAndStatus(memberId,Status.PUBLIC);
+    }
+
     public List<Recipe> getRecipesByMemberId(Integer memberId){
         return recipeRepository.getRecipesByMemberId(memberId);
     }
