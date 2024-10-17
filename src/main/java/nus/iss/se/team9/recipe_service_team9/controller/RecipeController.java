@@ -128,11 +128,14 @@ public class RecipeController {
         return ResponseEntity.ok(recipeService.getAllUniqueTags());
     }
 
-    @PostMapping("/save/{id}")
-    public ResponseEntity<String> saveRecipe(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
+    @GetMapping("/save/{id}")
+    public ResponseEntity<String> saveRecipe(@PathVariable Integer id,
+                                             @RequestHeader("Authorization") String token) {
+        System.out.println("Processing saving recipe, recipeId :");
+        System.out.println("get recipe by id " + id);
         Recipe recipe = recipeService.getRecipeById(id);
-        Member member = userService.getMemberById(jwtService.extractId(token));
-        recipeService.saveRecipe(recipe, member);
+        System.out.println("recipe get :"+recipe);
+        recipeService.saveRecipe(recipe, jwtService.extractId(token));
         return ResponseEntity.ok("Recipe saved successfully");
     }
 
@@ -144,26 +147,26 @@ public class RecipeController {
         return ResponseEntity.ok("Unsubscribed from recipe successfully");
     }
 
-    @GetMapping("/review/{id}")
-    public ResponseEntity<Review> reviewRecipe(@PathVariable Integer id) {
-        Recipe recipe = recipeService.getRecipeById(id);
-        Review review = new Review();
-        review.setRecipe(recipe);
-        return ResponseEntity.ok(review);
-    }
-
-    @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteRecipe(@PathVariable("id") Integer id) {
-        Recipe recipe = recipeService.getRecipeById(id);
-        List<Ingredient> ingredients = recipe.getIngredients();
-        for (Ingredient ingredient : ingredients) {
-            ingredient.getRecipes().remove(recipe);
-            ingredientService.saveIngredient(ingredient);
-        }
-        recipe.setStatus(Status.DELETED);
-        recipeService.updateRecipe(recipe);
-        return ResponseEntity.ok("Recipe deleted successfully");
-    }
+//    @GetMapping("/review/{id}")
+//    public ResponseEntity<Review> reviewRecipe(@PathVariable Integer id) {
+//        Recipe recipe = recipeService.getRecipeById(id);
+//        Review review = new Review();
+//        review.setRecipe(recipe);
+//        return ResponseEntity.ok(review);
+//    }
+//
+//    @DeleteMapping("/delete/{id}")
+//    public ResponseEntity<String> deleteRecipe(@PathVariable("id") Integer id) {
+//        Recipe recipe = recipeService.getRecipeById(id);
+//        List<Ingredient> ingredients = recipe.getIngredients();
+//        for (Ingredient ingredient : ingredients) {
+//            ingredient.getRecipes().remove(recipe);
+//            ingredientService.saveIngredient(ingredient);
+//        }
+//        recipe.setStatus(Status.DELETED);
+//        recipeService.updateRecipe(recipe);
+//        return ResponseEntity.ok("Recipe deleted successfully");
+//    }
 
     @GetMapping("/detail/{id}")
     public ResponseEntity<Map<String, Object>> viewRecipe(@PathVariable("id") Integer id) {

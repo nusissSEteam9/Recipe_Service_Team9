@@ -73,11 +73,11 @@ public class RecipeService {
     }
 
     // save specific recipe by id
-    public void saveRecipe(Recipe recipe, Member member) {
-        ResponseEntity<String> response = userService.saveRecipeToMemberSavedList(member.getId(), recipe);
+    public void saveRecipe(Recipe recipe,Integer memberId) {
+        ResponseEntity<String> response = userService.saveRecipeToMemberSavedList(memberId, recipe.getId());
         if (response.getStatusCode() == HttpStatus.OK) {
-            recipe.getMembersWhoSave().add(member);
             recipe.setNumberOfSaved(recipe.getNumberOfSaved() + 1);
+            recipe.getMembersWhoSave().add(userService.getMemberById(memberId));
             recipeRepository.save(recipe);
         } else {
             throw new RuntimeException("Failed to save recipe to member-api: " + response.getBody());
