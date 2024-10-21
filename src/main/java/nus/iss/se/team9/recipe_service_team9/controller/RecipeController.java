@@ -30,6 +30,11 @@ public class RecipeController {
     @Autowired
     private IngredientService ingredientService;
 
+    @GetMapping("/health")
+    public String checkHealth(){
+        return "API is connected";
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Recipe> getRecipeById(@PathVariable("id") Integer id) {
         Recipe recipe = recipeService.getRecipeById(id);
@@ -146,27 +151,6 @@ public class RecipeController {
         recipeService.unsubscribeRecipe(recipe, member);
         return ResponseEntity.ok("Unsubscribed from recipe successfully");
     }
-
-//    @GetMapping("/review/{id}")
-//    public ResponseEntity<Review> reviewRecipe(@PathVariable Integer id) {
-//        Recipe recipe = recipeService.getRecipeById(id);
-//        Review review = new Review();
-//        review.setRecipe(recipe);
-//        return ResponseEntity.ok(review);
-//    }
-//
-//    @DeleteMapping("/delete/{id}")
-//    public ResponseEntity<String> deleteRecipe(@PathVariable("id") Integer id) {
-//        Recipe recipe = recipeService.getRecipeById(id);
-//        List<Ingredient> ingredients = recipe.getIngredients();
-//        for (Ingredient ingredient : ingredients) {
-//            ingredient.getRecipes().remove(recipe);
-//            ingredientService.saveIngredient(ingredient);
-//        }
-//        recipe.setStatus(Status.DELETED);
-//        recipeService.updateRecipe(recipe);
-//        return ResponseEntity.ok("Recipe deleted successfully");
-//    }
 
     @GetMapping("/detail/{id}")
     public ResponseEntity<Map<String, Object>> viewRecipe(@PathVariable("id") Integer id) {
