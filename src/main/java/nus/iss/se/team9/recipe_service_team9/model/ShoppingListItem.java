@@ -1,6 +1,6 @@
 package nus.iss.se.team9.recipe_service_team9.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 
 @Entity
@@ -15,7 +15,8 @@ public class ShoppingListItem {
 
 
 	@ManyToOne
-	@JsonBackReference(value = "member-shoppingList")
+//	@JsonBackReference(value = "member-shoppingList")
+	@JsonIgnore
 	private Member member;
 	public ShoppingListItem() {}
 	

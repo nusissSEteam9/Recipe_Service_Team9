@@ -101,7 +101,8 @@ public class Recipe {
 			joinColumns = @JoinColumn(name = "saved_recipes_id"),
 			inverseJoinColumns = @JoinColumn(name = "members_who_save_id")
 	)
-	@JsonManagedReference(value = "members-savedRecipes")
+//	@JsonManagedReference(value = "members-savedRecipes")
+	@JsonIgnore
 	private List<Member> membersWhoSave;
 
 

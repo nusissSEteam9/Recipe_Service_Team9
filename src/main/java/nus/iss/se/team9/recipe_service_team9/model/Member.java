@@ -1,6 +1,6 @@
 package nus.iss.se.team9.recipe_service_team9.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -36,11 +36,13 @@ public class Member extends User {
 	private List<String> preferenceList;
 
 	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
-	@JsonManagedReference(value = "member-shoppingList")
+//	@JsonManagedReference(value = "member-shoppingList")
+	@JsonIgnore
 	private List<ShoppingListItem> shoppingList;
 
 	@ManyToMany(mappedBy = "membersWhoSave")
-	@JsonBackReference(value = "members-savedRecipes")
+//	@JsonBackReference(value = "members-savedRecipes")
+	@JsonIgnore
 	private List<Recipe> savedRecipes;
 
 	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
@@ -48,11 +50,13 @@ public class Member extends User {
 	private List<Recipe> addedRecipes;
 
 	@OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
-	@JsonManagedReference (value = "member-reviews")
+//	@JsonManagedReference (value = "member-reviews")
+	@JsonIgnore
 	private List<Review> reviews;
 
 	@OneToMany(mappedBy = "member")
-	@JsonManagedReference (value = "member-reports")
+//	@JsonManagedReference (value = "member-reports")
+	@JsonIgnore
 	private List<Report> reports;
 
 	@OneToMany(mappedBy = "memberReported")

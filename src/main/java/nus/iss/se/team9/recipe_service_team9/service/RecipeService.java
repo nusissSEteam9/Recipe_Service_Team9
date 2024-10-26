@@ -6,8 +6,6 @@ import nus.iss.se.team9.recipe_service_team9.repo.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -72,29 +70,17 @@ public class RecipeService {
         return uniqueTags;
     }
 
-    // save specific recipe by id
-    public void saveRecipe(Recipe recipe,Integer memberId) {
-        ResponseEntity<String> response = userService.saveRecipeToMemberSavedList(memberId, recipe.getId());
-        if (response.getStatusCode() == HttpStatus.OK) {
-            recipe.setNumberOfSaved(recipe.getNumberOfSaved() + 1);
-            recipe.getMembersWhoSave().add(userService.getMemberById(memberId));
-            recipeRepository.save(recipe);
-        } else {
-            throw new RuntimeException("Failed to save recipe to member-api: " + response.getBody());
-        }
-    }
+    public void updateNumberOfSaved(Integer recipeId, String operation) {
+        Recipe recipe = this.getRecipeById(recipeId);
 
-    // unsubscribe specific recipe by id
-    public void unsubscribeRecipe(Recipe recipe, Member member) {
-        ResponseEntity<String> response = userService.removeRecipeFromMemberSavedList(member.getId(),recipe);
-        userService.removeRecipeFromMemberSavedList(member.getId(), recipe);
-        if (response.getStatusCode() == HttpStatus.OK) {
-            recipe.getMembersWhoSave().remove(member);
+        if (operation.equals("save")) {
+            recipe.setNumberOfSaved(recipe.getNumberOfSaved() + 1);
+        } else if (operation.equals("remove")) {
             recipe.setNumberOfSaved(recipe.getNumberOfSaved() - 1);
-            recipeRepository.save(recipe);
         } else {
-            throw new RuntimeException("Failed to save recipe to member-api: " + response.getBody());
+            throw new IllegalArgumentException("Invalid operation: " + operation);
         }
+        recipeRepository.save(recipe);
     }
 
     public Page<Recipe> searchByTag(String tag, int pageNo, int pageSize) {
@@ -126,15 +112,6 @@ public class RecipeService {
         return Stream.of(listByName, listByTag, listByDescription).flatMap(List::stream).distinct()
                 .collect(Collectors.toList());
     }
-
-    public void createRecipe(Recipe newRecipe) {
-        recipeRepository.save(newRecipe);
-    }
-
-    public void updateRecipe(Recipe newRecipe) {
-        recipeRepository.save(newRecipe);
-    }
-
 
     public List<Recipe> getAllRecipesByYear(int year) {
         return recipeRepository.getAllRecipesByYear(year);

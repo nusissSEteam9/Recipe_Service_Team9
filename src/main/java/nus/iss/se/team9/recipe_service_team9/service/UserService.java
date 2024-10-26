@@ -39,39 +39,4 @@ public class UserService {
             throw new RuntimeException("Error occurred while retrieving member: " + e.getMessage());
         }
     }
-
-    public ResponseEntity<String> saveRecipeToMemberSavedList(Integer memberId, Integer recipeId) {
-        try {
-            String url = userServiceUrl + "/member/saveRecipe";
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("memberId", memberId);
-            requestBody.put("recipeId", recipeId);
-            HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(requestBody, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class);
-            if (response.getStatusCode() == HttpStatus.OK) {
-                return ResponseEntity.ok("Recipe saved successfully in member-api: " + response.getBody());
-            } else {
-                return ResponseEntity.status(response.getStatusCode()).body("Failed to save recipe: " + response.getBody());
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " + e.getMessage());
-        }
-    }
-
-
-    public ResponseEntity<String> removeRecipeFromMemberSavedList(Integer memberId, Recipe recipe){
-        try {
-            String url = userServiceUrl + "/member/"+ memberId + "/removeRecipe";
-            ResponseEntity<String> response = restTemplate.postForEntity(url, recipe, String.class);
-            if (response.getStatusCode() == HttpStatus.OK) {
-                return ResponseEntity.ok("Recipe removed successfully in member-api: " + response.getBody());
-            } else {
-                return ResponseEntity.status(response.getStatusCode()).body("Failed to fail recipe: " + response.getBody());
-            }
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error occurred: " + e.getMessage());
-        }
-    }
 }

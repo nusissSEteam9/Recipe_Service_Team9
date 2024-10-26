@@ -1,5 +1,6 @@
 package nus.iss.se.team9.recipe_service_team9.controller;
 
+import com.mysql.cj.x.protobuf.Mysqlx;
 import jakarta.servlet.http.HttpServletRequest;
 import nus.iss.se.team9.recipe_service_team9.model.*;
 import nus.iss.se.team9.recipe_service_team9.service.*;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.xml.transform.OutputKeys;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -123,6 +125,18 @@ public class RecipeController {
         }
     }
 
+    @PutMapping("/setNumberOfSaved/{id}")
+    public ResponseEntity<String> updateRecipeNumberOfSaved(@PathVariable Integer id, @RequestBody String operation) {
+        try {
+            recipeService.updateNumberOfSaved(id, operation);
+            return ResponseEntity.ok("Operation successful");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body("Invalid operation: " + operation);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred");
+        }
+    }
+
     @GetMapping("/getTags")
     public ResponseEntity<List<String>> getTags(@RequestParam("keyword") String keyword) {
         List<String> matchingTags = recipeService.findMatchingTags(keyword);
@@ -131,25 +145,6 @@ public class RecipeController {
     @GetMapping("/getAllUniqueTags")
     public ResponseEntity<Set<String>> getAllUniqueTags() {
         return ResponseEntity.ok(recipeService.getAllUniqueTags());
-    }
-
-    @GetMapping("/save/{id}")
-    public ResponseEntity<String> saveRecipe(@PathVariable Integer id,
-                                             @RequestHeader("Authorization") String token) {
-        System.out.println("Processing saving recipe, recipeId :");
-        System.out.println("get recipe by id " + id);
-        Recipe recipe = recipeService.getRecipeById(id);
-        System.out.println("recipe get :"+recipe);
-        recipeService.saveRecipe(recipe, jwtService.extractId(token));
-        return ResponseEntity.ok("Recipe saved successfully");
-    }
-
-    @PostMapping("/unsubscribe/{id}")
-    public ResponseEntity<String> unsubscribeRecipe(@PathVariable Integer id, @RequestHeader("Authorization") String token) {
-        Recipe recipe = recipeService.getRecipeById(id);
-        Member member = userService.getMemberById(jwtService.extractId(token));
-        recipeService.unsubscribeRecipe(recipe, member);
-        return ResponseEntity.ok("Unsubscribed from recipe successfully");
     }
 
     @GetMapping("/detail/{id}")
@@ -251,7 +246,7 @@ public class RecipeController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<String> createRecipe(@RequestBody Map<String, Object> payload){
+    public ResponseEntity<String> createRecipe(@RequestBody Map<String, Object> payload,@RequestHeader("Authorization") String token){
         try{
             String name = (String) payload.get("name");
             String description = (String) payload.get("description");
@@ -270,7 +265,7 @@ public class RecipeController {
             recipe.setNotes(notes);
             recipe.setStatus(status);
             recipe.setImage(image);
-            recipe.setMember(userService.getMemberById(1));//修改为JWT来获取用户信息
+            recipe.setMember(userService.getMemberById(jwtService.extractId(token)));
 
             List<String> steps = (List<String>) payload.get("steps");
             recipe.setSteps(steps);
@@ -279,7 +274,7 @@ public class RecipeController {
             List<String> tags = (List<String>) payload.get("tags");
             recipe.setTags(tags);
 
-            recipeService.createRecipe(recipe);
+            recipeService.save(recipe);
 
             List<Map<String, Object>> ingredientsPayload = (List<Map<String, Object>>) payload.get("ingredients");
             List<Map<String, Object>> nutritionPayload = (List<Map<String, Object>>) payload.get("nutrition");
@@ -309,7 +304,7 @@ public class RecipeController {
             recipe.setIngredients(ingredients);
             setRecipeNutrients(recipe);
             recipe.setHealthScore(recipe.calculateHealthScore());
-            recipeService.createRecipe(recipe);
+            recipeService.save(recipe);
             return ResponseEntity.ok("Recipe created successfully");
         }catch (Exception e){
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating recipe: " + e.getMessage());
