@@ -79,7 +79,8 @@ public class Recipe {
 			joinColumns = @JoinColumn(name = "recipe_id"),
 			inverseJoinColumns = @JoinColumn(name = "ingredient_id")
 	)
-	@JsonIgnore
+//	@JsonIgnore
+	@JsonManagedReference(value = "recipe-ingredients")
 	private List<Ingredient> ingredients;
 
 	@OneToMany(mappedBy = "recipe")
