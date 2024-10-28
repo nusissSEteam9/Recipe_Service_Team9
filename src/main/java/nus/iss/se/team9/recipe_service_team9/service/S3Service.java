@@ -59,6 +59,7 @@ public class S3Service {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                     .bucket(bucketName)
                     .key(keyName)
+                    .acl("public-read")
                     .build();
 
             PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
