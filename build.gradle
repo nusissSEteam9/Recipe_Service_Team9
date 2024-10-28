@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.3.4'
 	id 'io.spring.dependency-management' version '1.1.6'
+
 }
 
 group = 'nus.iss.se.team9'
@@ -31,7 +32,11 @@ dependencies {
 	implementation group: 'com.mysql', name: 'mysql-connector-j', version: '9.0.0'
 	implementation 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
+
+	implementation(platform("software.amazon.awssdk:bom:2.27.21"))
+	implementation("software.amazon.awssdk:s3")
 }
+
 
 tasks.named('test') {
 	useJUnitPlatform()

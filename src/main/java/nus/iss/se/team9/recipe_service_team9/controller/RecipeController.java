@@ -392,4 +392,25 @@ public class RecipeController {
         recipe.setSaturatedFat(saturatedFatPDV);
     }
 
+
+
+    @Autowired
+    private S3Service s3Service;
+    @GetMapping("/presigned-url/{bucketName}/{keyName}")
+    public ResponseEntity<Map<String, String>> getPresignedUrl(
+            @PathVariable String bucketName,
+            @PathVariable String keyName,
+            @RequestHeader("Authorization") String token) {
+        Map<String, String> response = new HashMap<>();
+
+        try {
+            String presignedUrl = s3Service.createPresignedGetUrl(bucketName, keyName);
+            response.put("url", presignedUrl);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error generating presigned URL: " + e.getMessage()));
+        }
+    }
+
 }
