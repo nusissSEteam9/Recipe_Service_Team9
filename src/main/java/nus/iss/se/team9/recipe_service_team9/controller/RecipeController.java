@@ -148,7 +148,7 @@ public class RecipeController {
     }
 
     @GetMapping("/detail/{id}")
-    public ResponseEntity<Map<String, Object>> viewRecipe(@PathVariable("id") Integer id) {
+    public ResponseEntity<Map<String, Object>> viewRecipe(@PathVariable("id") Integer id,@RequestHeader("Authorization") String token) {
         Recipe recipe = recipeService.getRecipeById(id);
         if (recipe.getStatus() == Status.DELETED) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
@@ -157,6 +157,7 @@ public class RecipeController {
         Integer createdByUserId = recipe.getMember().getId();
         Map<String, Object> response = new HashMap<>();
         response.put("recipe", recipe);
+        response.put("isSaved", userService.checkIfRecipeSaved(id,token));
         response.put("createdBy", createdBy);
         response.put("createdByUserId", createdByUserId);
         List<Map<String, Object>> reviewList = new ArrayList<>();
@@ -166,8 +167,6 @@ public class RecipeController {
             reviewData.put("rating", review.getRating());
             reviewData.put("comment", review.getComment());
             reviewData.put("reviewDate", review.getReviewDate());
-
-            // 添加评论人的 id 和 username
             if (review.getMember() != null) {
                 reviewData.put("memberId", review.getMember().getId());
                 reviewData.put("memberUsername", review.getMember().getUsername());

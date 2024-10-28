@@ -39,4 +39,18 @@ public class UserService {
             throw new RuntimeException("Error occurred while retrieving member: " + e.getMessage());
         }
     }
+
+    public Boolean checkIfRecipeSaved(Integer recipeId,String token) {
+        String url = userServiceUrl + "/checkIfRecipeSaved?recipeId=" + recipeId;
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", token);
+        HttpEntity<String> entity = new HttpEntity<>(headers);
+        ResponseEntity<Boolean> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                entity,
+                Boolean.class
+        );
+        return response.getBody();
+    }
 }
