@@ -71,43 +71,30 @@ public class Recipe {
 	private List<String> steps;
 	@ElementCollection
 	private List<String> tags;
-
-
+	
 	@ManyToMany
-	@JoinTable(
-			name = "recipe_ingredients",
-			joinColumns = @JoinColumn(name = "recipe_id"),
-			inverseJoinColumns = @JoinColumn(name = "ingredient_id")
-	)
-//	@JsonIgnore
+	@JoinTable(name = "recipe_ingredients", joinColumns = @JoinColumn(name = "recipe_id"), inverseJoinColumns = @JoinColumn(name = "ingredient_id"))
 	@JsonManagedReference(value = "recipe-ingredients")
 	private List<Ingredient> ingredients;
-
+	
 	@OneToMany(mappedBy = "recipe")
 	@JsonManagedReference(value = "recipe-reviews")
 	private List<Review> reviews;
-
+	
 	@OneToMany(mappedBy = "recipeReported")
 	@JsonManagedReference(value = "recipe-reportsToRecipe")
 	private List<RecipeReport> reportsToRecipe;
-
+	
 	@ManyToOne
 	@JoinColumn(name = "member_id")
 	@JsonBackReference(value = "member-addedRecipes")
 	private Member member;
-
+	
 	@ManyToMany
-	@JoinTable(
-			name = "recipe_members_who_save",
-			joinColumns = @JoinColumn(name = "saved_recipes_id"),
-			inverseJoinColumns = @JoinColumn(name = "members_who_save_id")
-	)
-//	@JsonManagedReference(value = "members-savedRecipes")
+	@JoinTable(name = "recipe_members_who_save", joinColumns = @JoinColumn(name = "saved_recipes_id"), inverseJoinColumns = @JoinColumn(name = "members_who_save_id"))
 	@JsonIgnore
 	private List<Member> membersWhoSave;
-
-
-
+	
 	public Recipe() {
 		ingredients = new ArrayList<>();
 		tags = new ArrayList<>();
@@ -118,7 +105,7 @@ public class Recipe {
 		rating = 0.0;
 		submittedDate = LocalDate.now();
 	}
-
+	
 	public Recipe(String name, String description, Member member) {
 		this();
 		this.name = name;
@@ -127,11 +114,13 @@ public class Recipe {
 		status = Status.PUBLIC;
 		steps = new ArrayList<>();
 	}
-
-	public Recipe(String name, String description, double rating, int preparationTime, int servings,
-				  int numberOfSteps, Member member, double calories, double protein, double carbohydrate, double sugar,
-				  double sodium, double fat, double saturatedFat, List<String> steps) {
+	
+	public Recipe(String name, String description, String notes, String image, double rating, int preparationTime,
+				  int servings, int numberOfSteps, Member member, double calories, double protein, double carbohydrate,
+				  double sugar, double sodium, double fat, double saturatedFat, List<String> steps, List<String> tags) {
 		this(name, description, member);
+		this.notes = notes;
+		this.image = image;
 		this.rating = rating;
 		this.numberOfSaved = 0;
 		this.preparationTime = preparationTime;
@@ -145,41 +134,52 @@ public class Recipe {
 		this.fat = fat;
 		this.saturatedFat = saturatedFat;
 		this.steps = steps;
+		this.tags = tags;
+		
 		this.healthScore = calculateHealthScore();
-		this.status = Status.PUBLIC;
 		this.numberOfRating = 0;
 	}
-
+	
 	// Getter and Setter methods
-
+	
 	public int calculateHealthScore() {
 		healthScore = 0;
-		if (protein >= 10 && protein <= 15)
+		if (protein >= 10 && protein <= 15) {
 			healthScore++;
-		if (carbohydrate >= 55 && carbohydrate <= 75)
+		}
+		if (carbohydrate >= 55 && carbohydrate <= 75) {
 			healthScore++;
-		if (sugar < 10)
+		}
+		if (sugar < 10) {
 			healthScore++;
-		if (sodium < 33)
+		}
+		if (sodium < 33) {
 			healthScore++;
-		if (fat >= 15 && fat <= 30)
+		}
+		if (fat >= 15 && fat <= 30) {
 			healthScore++;
-		if (saturatedFat < 10)
+		}
+		if (saturatedFat < 10) {
 			healthScore++;
+		}
 		return healthScore;
 	}
-
+	
 	@Override
 	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
 		Recipe recipe = (Recipe) o;
 		return Objects.equals(id, recipe.id);
 	}
-
+	
 	@Override
 	public int hashCode() {
 		return Objects.hash(id);
 	}
-
+	
 }
