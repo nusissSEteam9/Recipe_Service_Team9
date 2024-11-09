@@ -1,8 +1,11 @@
 package nus.iss.se.team9.recipe_service_team9.service;
 
 import jakarta.transaction.Transactional;
-import nus.iss.se.team9.recipe_service_team9.model.*;
-import nus.iss.se.team9.recipe_service_team9.repo.*;
+import nus.iss.se.team9.recipe_service_team9.model.Ingredient;
+import nus.iss.se.team9.recipe_service_team9.model.Recipe;
+import nus.iss.se.team9.recipe_service_team9.model.Status;
+import nus.iss.se.team9.recipe_service_team9.repo.IngredientRepository;
+import nus.iss.se.team9.recipe_service_team9.repo.RecipeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -17,11 +20,14 @@ import java.util.stream.Stream;
 public class RecipeService {
     private final RecipeRepository recipeRepository;
     private final UserService userService;
-
+    private final IngredientRepository ingredientRepository;
+    
     @Autowired
-    public RecipeService(RecipeRepository recipeRepository, UserService userService) {
+    public RecipeService(RecipeRepository recipeRepository, UserService userService,
+                         IngredientRepository ingredientRepository) {
         this.recipeRepository = recipeRepository;
         this.userService = userService;
+        this.ingredientRepository = ingredientRepository;
     }
 
     public void save(Recipe recipe){
@@ -37,6 +43,7 @@ public class RecipeService {
         Recipe recipe = recipeRepository.findById(recipeId)
                 .orElseThrow(() -> new RuntimeException("Recipe not found with ID: " + recipeId));
         recipe.setRating(rating);
+        recipe.setNumberOfRating(recipe.getNumberOfRating() + 1);
         recipeRepository.save(recipe);
     }
 
@@ -150,5 +157,16 @@ public class RecipeService {
         return recipes;
     }
 
-
+    public void deleteIngredientsByRecipeId(Integer recipeId) {
+        Recipe recipe = recipeRepository.findById(recipeId)
+                .orElseThrow(() -> new RuntimeException("Recipe not found with ID: " + recipeId));
+        List<Ingredient> ingredients = recipe.getIngredients();
+        if (!ingredients.isEmpty()) {
+			ingredientRepository.deleteAll(ingredients);
+        }
+        recipe.setIngredients(new ArrayList<>());
+        recipeRepository.save(recipe);
+    }
+    
+    
 }

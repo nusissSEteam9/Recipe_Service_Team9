@@ -1,7 +1,6 @@
 package nus.iss.se.team9.recipe_service_team9.model;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +32,7 @@ public class Ingredient {
 	private Double saturatedFat;
 	@ManyToMany(mappedBy = "ingredients")
 	//	@JsonIgnore
-	@JsonBackReference(value = "recipe-ingredients")
+	@JsonBackReference(value = "ingredient_recipes")
 	private List<Recipe> recipes;
 	public Ingredient() {
 		recipes = new ArrayList<>();

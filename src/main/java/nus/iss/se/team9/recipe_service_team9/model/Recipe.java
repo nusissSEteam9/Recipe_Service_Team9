@@ -73,7 +73,7 @@ public class Recipe {
 	private List<String> tags;
 	
 	@ManyToMany
-	@JoinTable(name = "recipe_ingredients", joinColumns = @JoinColumn(name = "recipe_id"), inverseJoinColumns = @JoinColumn(name = "ingredient_id"))
+	@JoinTable(name = "ingredient_recipes", joinColumns = @JoinColumn(name = "recipes_id"), inverseJoinColumns = @JoinColumn(name = "ingredients_id"))
 	@JsonManagedReference(value = "recipe-ingredients")
 	private List<Ingredient> ingredients;
 	

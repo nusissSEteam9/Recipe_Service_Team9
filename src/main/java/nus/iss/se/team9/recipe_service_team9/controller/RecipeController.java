@@ -313,6 +313,66 @@ public class RecipeController {
 		}
 	}
 	
+	@PutMapping("/update/{id}")
+	public ResponseEntity<String> updateRecipe(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+		try {
+			Recipe recipe = recipeService.getRecipeById(id);
+			if (recipe == null) {
+				return ResponseEntity.notFound()
+									 .build();
+			}
+			recipe.setName((String) payload.get("name"));
+			recipe.setDescription((String) payload.get("description"));
+			recipe.setNotes((String) payload.get("notes"));
+			recipe.setPreparationTime((Integer) payload.get("preparationTime"));
+			recipe.setServings((Integer) payload.get("servings"));
+			recipe.setSteps((List<String>) payload.get("steps"));
+			recipe.setTags((List<String>) payload.get("tags"));
+			recipe.setImage((String) payload.get("image"));
+			recipe.setStatus(Status.valueOf(((String) payload.get("status")).toUpperCase()));
+			
+			Map<String, Object> nutritionData = (Map<String, Object>) payload.get("nutrition");
+			recipe.setCalories(handleNutritionData(nutritionData.get("calories")));
+			recipe.setProtein(handleNutritionData(nutritionData.get("protein")));
+			recipe.setCarbohydrate(handleNutritionData(nutritionData.get("carbohydrate")));
+			recipe.setSugar(handleNutritionData(nutritionData.get("sugar")));
+			recipe.setSodium(handleNutritionData(nutritionData.get("sodium")));
+			recipe.setFat(handleNutritionData(nutritionData.get("fat")));
+			recipe.setSaturatedFat(handleNutritionData(nutritionData.get("saturatedFat")));
+			
+			recipeService.deleteIngredientsByRecipeId(id);
+			
+			List<Map<String, Object>> ingredientsPayload = (List<Map<String, Object>>) payload.get("ingredients");
+			List<Ingredient> ingredients = new ArrayList<>();
+			for (Map<String, Object> ingredientData : ingredientsPayload) {
+				// Create and save each Ingredient
+				IngredientDTO ingredientDTO = new IngredientDTO(ingredientData.get("foodText")
+																			  .toString(),
+																ingredientData.get("protein"),
+																ingredientData.get("calories"),
+																ingredientData.get("carbohydrate"),
+																ingredientData.get("sugar"),
+																ingredientData.get("sodium"),
+																ingredientData.get("fat"),
+																ingredientData.get("saturatedFat"));
+				Ingredient ingredient = IngredientMapper.toIngredient(ingredientDTO);
+				ingredient.getRecipes()
+						  .add(recipe);
+				ingredientService.saveIngredient(ingredient);
+				ingredients.add(ingredient);
+			}
+			recipe.setIngredients(ingredients);
+			setRecipeNutrients(recipe);
+			recipe.setHealthScore(recipe.calculateHealthScore());
+			
+			recipeService.save(recipe);
+			return ResponseEntity.ok("Recipe updated successfully");
+		} catch (Exception e) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+								 .body("Error updating recipe: " + e.getMessage());
+		}
+	}
+	
 	private double handleNutritionData(Object nutritionData) {
 		if (nutritionData instanceof Integer) {
 			return ((Integer) nutritionData).doubleValue();
