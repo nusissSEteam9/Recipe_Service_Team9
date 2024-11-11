@@ -1,13 +1,5 @@
 # 构建阶段
-FROM ubuntu:latest AS builder
-
-# 更新并安装必要工具
-RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jdk findutils && \
-    rm -rf /var/lib/apt/lists/*  # 清理缓存减少镜像大小
-
-# 设置 JAVA_HOME 环境变量
-ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-ENV PATH="$JAVA_HOME/bin:$PATH"
+FROM openjdk:21 AS builder
 
 # 设置工作目录
 WORKDIR /app
@@ -28,7 +20,7 @@ FROM openjdk:21-slim
 WORKDIR /app
 
 # 将构建好的 JAR 文件复制到运行时镜像
-COPY application-jar/*.jar /app/app.jar
+COPY --from=builder /app/build/libs/*.jar /app/app.jar
 
 # 暴露 8080 端口
 EXPOSE 8080
