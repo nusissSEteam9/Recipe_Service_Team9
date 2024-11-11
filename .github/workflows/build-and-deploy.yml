@@ -28,6 +28,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+
+      # 添加这一步以授予 gradlew 执行权限
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
       - name: Build and Test with Gradle
         env:
           SPRING_DATASOURCE_URL: jdbc:mysql://iss-practice-module.cjq2w0cwqb5h.ap-southeast-1.rds.amazonaws.com:3306/HEALTHYRECIPY
