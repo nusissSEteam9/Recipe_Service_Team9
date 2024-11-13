@@ -108,3 +108,4 @@ jobs:
           git add ${Manifest_PATH}
           git commit -m "Update image tag to recipe-${{ github.sha }}"
           git push origin main
+          echo "Image tag updated in GitOps repo"
