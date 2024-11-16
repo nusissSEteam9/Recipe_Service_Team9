@@ -1,9 +1,14 @@
 package nus.iss.se.team9.recipe_service_team9.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import nus.iss.se.team9.recipe_service_team9.exception.UnauthorizedException;
+import nus.iss.se.team9.recipe_service_team9.factory.FilterStrategyFactory;
+import nus.iss.se.team9.recipe_service_team9.factory.SearchStrategyFactory;
+import nus.iss.se.team9.recipe_service_team9.filterStrategy.FilterStrategy;
 import nus.iss.se.team9.recipe_service_team9.mapper.IngredientMapper;
 import nus.iss.se.team9.recipe_service_team9.mapper.RecipeMapper;
 import nus.iss.se.team9.recipe_service_team9.model.*;
+import nus.iss.se.team9.recipe_service_team9.searchStrategy.SearchStrategy;
 import nus.iss.se.team9.recipe_service_team9.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -211,49 +216,40 @@ public class RecipeController {
             @RequestParam(defaultValue = "0") int pageNo, @RequestHeader("Authorization") String token,
             @RequestParam(defaultValue = "8") int pageSize) {
 
-        List<Recipe> results = switch (type) {
-            case "tag" -> recipeService.searchByTag(query);
-            case "name" -> recipeService.searchByName(query);
-            case "description" -> recipeService.searchByDescription(query);
-            default -> recipeService.searchAll(query);
-        };
+        SearchStrategy searchStrategy = SearchStrategyFactory.getSearchStrategy(type);
+        List<Recipe> results = searchStrategy.search(query, recipeService);
 
-        // Filter results
         List<Recipe> filteredResults = results;
         if (filter1) {
-            filteredResults = results.stream()
-                                     .filter(r -> r.getHealthScore() >= 4)
-                                     .collect(Collectors.toList());
+            FilterStrategy filterStrategy = FilterStrategyFactory.getFilterStrategy("filter1");
+            filteredResults = filterStrategy.filter(filteredResults, token, userService, jwtService);
         }
         if (filter2) {
-            Integer memberId = jwtService.extractId(token);
-            if (memberId == null) {
+            FilterStrategy filterStrategy = FilterStrategyFactory.getFilterStrategy("filter2");
+            try {
+                filteredResults = filterStrategy.filter(filteredResults, token, userService, jwtService);
+            } catch (UnauthorizedException e) {
                 return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-            }
-            Member member = userService.getMemberById(memberId);
-            Double calorieIntake = member.getCalorieIntake();
-            if (calorieIntake == null) {
+            } catch (IllegalArgumentException e) {
                 return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
             }
-            filteredResults = results.stream()
-                                     .filter(r -> r.getCalories() <= (calorieIntake / 3))
-                                     .collect(Collectors.toList());
         }
-
         int totalRecipes = filteredResults.size();
         int startIndex = pageNo * pageSize;
         int endIndex = Math.min(startIndex + pageSize, totalRecipes);
         int totalPages = (totalRecipes + pageSize - 1) / pageSize;
 
         List<RecipeDTO> recipeDTOList = filteredResults.subList(startIndex, endIndex)
-                                                       .stream()
-                                                       .map(RecipeMapper::toRecipeDTO)
-                                                       .toList();
+                .stream()
+                .map(RecipeMapper::toRecipeDTO)
+                .toList();
+
         Map<String, Object> response = new HashMap<>();
         response.put("currentPage", pageNo + 1);
         response.put("totalPages", totalPages);
         response.put("pageSize", pageSize);
         response.put("results", recipeDTOList);
+
         return ResponseEntity.ok(response);
     }
 
