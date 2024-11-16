@@ -208,7 +208,7 @@ public class RecipeController {
     }
 
     @PostMapping("/search")
-    public ResponseEntity<Map<String, Object>> searchRecipe(
+    public ResponseEntity<Map<String, Object>> searchByTypeOrFilter(
             @RequestParam(value = "query", required = false, defaultValue = "") String query,
             @RequestParam(value = "searchtype", required = false, defaultValue = "") String type,
             @RequestParam(name = "filter1", defaultValue = "false") boolean filter1,
