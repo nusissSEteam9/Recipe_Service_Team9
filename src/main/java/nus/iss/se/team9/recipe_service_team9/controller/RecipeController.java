@@ -2,12 +2,15 @@ package nus.iss.se.team9.recipe_service_team9.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import nus.iss.se.team9.recipe_service_team9.exception.UnauthorizedException;
+import nus.iss.se.team9.recipe_service_team9.facade.RecipeFacade;
 import nus.iss.se.team9.recipe_service_team9.factory.FilterStrategyFactory;
 import nus.iss.se.team9.recipe_service_team9.factory.SearchStrategyFactory;
 import nus.iss.se.team9.recipe_service_team9.filterStrategy.FilterStrategy;
-import nus.iss.se.team9.recipe_service_team9.mapper.IngredientMapper;
 import nus.iss.se.team9.recipe_service_team9.mapper.RecipeMapper;
-import nus.iss.se.team9.recipe_service_team9.model.*;
+import nus.iss.se.team9.recipe_service_team9.model.Member;
+import nus.iss.se.team9.recipe_service_team9.model.Recipe;
+import nus.iss.se.team9.recipe_service_team9.model.RecipeDTO;
+import nus.iss.se.team9.recipe_service_team9.model.Status;
 import nus.iss.se.team9.recipe_service_team9.searchStrategy.SearchStrategy;
 import nus.iss.se.team9.recipe_service_team9.service.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +20,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/recipe")
@@ -240,9 +241,9 @@ public class RecipeController {
         int totalPages = (totalRecipes + pageSize - 1) / pageSize;
 
         List<RecipeDTO> recipeDTOList = filteredResults.subList(startIndex, endIndex)
-                .stream()
-                .map(RecipeMapper::toRecipeDTO)
-                .toList();
+                                                       .stream()
+                                                       .map(RecipeMapper::toRecipeDTO)
+                                                       .toList();
 
         Map<String, Object> response = new HashMap<>();
         response.put("currentPage", pageNo + 1);
@@ -255,53 +256,17 @@ public class RecipeController {
 
     @PostMapping("/create")
     public ResponseEntity<String> createRecipe(@RequestBody Map<String, Object> payload,
-                                               @RequestHeader("Authorization") String token) {
+                                               @RequestHeader("Authorization") String token,
+                                               @RequestParam("file") MultipartFile file) {
         try {
-            Integer memberId = jwtService.extractId(token);
-            if (memberId == null) {
-                return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
-            }
-            Member member = userService.getMemberById(memberId);
-
-            Map<String, Object> nutritionData = (Map<String, Object>) payload.get("nutrition");
-            List<String> steps = (List<String>) payload.get("steps");
-            List<String> tags = (List<String>) payload.get("tags");
-
-            Recipe recipe = new Recipe((String) payload.get("name"), (String) payload.get("description"),
-                                       (String) payload.get("notes"), (String) payload.get("image"), 0.0,
-                                       (Integer) payload.get("preparationTime"), (Integer) payload.get("servings"),
-                                       steps.size(), member, handleNutritionData(nutritionData.get("calories")),
-                                       handleNutritionData(nutritionData.get("protein")),
-                                       handleNutritionData(nutritionData.get("carbohydrate")),
-                                       handleNutritionData(nutritionData.get("sugar")),
-                                       handleNutritionData(nutritionData.get("sodium")),
-                                       handleNutritionData(nutritionData.get("fat")),
-                                       handleNutritionData(nutritionData.get("saturated_fat")), steps, tags);
-
+            RecipeFacade recipeFacade = new RecipeFacade();
+            Integer memberId = recipeFacade.handleExtractId(token);
+            Member member = recipeFacade.handleGetMemberById(memberId);
+            String imageUrl = recipeFacade.handleImageUpload(file);
+            Recipe recipe = recipeFacade.handleNewRecipe(payload, member, imageUrl);
             List<Map<String, Object>> ingredientsPayload = (List<Map<String, Object>>) payload.get("ingredients");
-            List<Ingredient> ingredients = new ArrayList<>();
-            for (Map<String, Object> ingredientData : ingredientsPayload) {
-                // Create and save each Ingredient
-                IngredientDTO ingredientDTO = new IngredientDTO(ingredientData.get("food_text")
-                                                                              .toString(),
-                                                                ingredientData.get("protein"),
-                                                                ingredientData.get("calories"),
-                                                                ingredientData.get("carbohydrate"),
-                                                                ingredientData.get("sugar"),
-                                                                ingredientData.get("sodium"), ingredientData.get("fat"),
-                                                                ingredientData.get("saturated_fat"));
-                Ingredient ingredient = IngredientMapper.toIngredient(ingredientDTO);
-                ingredient.getRecipes()
-                          .add(recipe);
-                ingredientService.saveIngredient(ingredient);
-                ingredients.add(ingredient);
-            }
-            recipe.setIngredients(ingredients);
-            setRecipeNutrients(recipe);
-            recipe.setHealthScore(recipe.calculateHealthScore());
-
-            recipeService.save(recipe);
-
+            recipeFacade.handleSetIngredients(ingredientsPayload, recipe);
+            recipeFacade.handleSaveRecipe(recipe);
             return ResponseEntity.ok("Recipe created successfully");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -310,58 +275,20 @@ public class RecipeController {
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<String> updateRecipe(@PathVariable Integer id, @RequestBody Map<String, Object> payload) {
+    public ResponseEntity<String> updateRecipe(@PathVariable Integer id, @RequestBody Map<String, Object> payload,
+                                               @RequestHeader("Authorization") String token,
+                                               @RequestParam("file") MultipartFile file) {
         try {
-            Recipe recipe = recipeService.getRecipeById(id);
-            if (recipe == null) {
-                return ResponseEntity.notFound()
-                                     .build();
-            }
-            recipe.setName((String) payload.get("name"));
-            recipe.setDescription((String) payload.get("description"));
-            recipe.setNotes((String) payload.get("notes"));
-            recipe.setPreparationTime((Integer) payload.get("preparationTime"));
-            recipe.setServings((Integer) payload.get("servings"));
-            recipe.setSteps((List<String>) payload.get("steps"));
-            recipe.setTags((List<String>) payload.get("tags"));
-            recipe.setImage((String) payload.get("image"));
-            recipe.setStatus(Status.valueOf(((String) payload.get("status")).toUpperCase()));
 
-            Map<String, Object> nutritionData = (Map<String, Object>) payload.get("nutrition");
-            recipe.setCalories(handleNutritionData(nutritionData.get("calories")));
-            recipe.setProtein(handleNutritionData(nutritionData.get("protein")));
-            recipe.setCarbohydrate(handleNutritionData(nutritionData.get("carbohydrate")));
-            recipe.setSugar(handleNutritionData(nutritionData.get("sugar")));
-            recipe.setSodium(handleNutritionData(nutritionData.get("sodium")));
-            recipe.setFat(handleNutritionData(nutritionData.get("fat")));
-            recipe.setSaturatedFat(handleNutritionData(nutritionData.get("saturatedFat")));
-
-            recipeService.deleteIngredientsByRecipeId(id);
-
+            RecipeFacade recipeFacade = new RecipeFacade();
+            Integer memberId = recipeFacade.handleExtractId(token);
+            String imageUrl = recipeFacade.handleImageUpload(file);
+            Recipe recipe = recipeFacade.handleGetRecipeById(id);
+            recipeFacade.handleUpdateRecipe(payload, recipe, imageUrl);
+            recipeFacade.handleDeleteIngredientsByRecipeId(id);
             List<Map<String, Object>> ingredientsPayload = (List<Map<String, Object>>) payload.get("ingredients");
-            List<Ingredient> ingredients = new ArrayList<>();
-            for (Map<String, Object> ingredientData : ingredientsPayload) {
-                // Create and save each Ingredient
-                IngredientDTO ingredientDTO = new IngredientDTO(ingredientData.get("foodText")
-                                                                              .toString(),
-                                                                ingredientData.get("protein"),
-                                                                ingredientData.get("calories"),
-                                                                ingredientData.get("carbohydrate"),
-                                                                ingredientData.get("sugar"),
-                                                                ingredientData.get("sodium"),
-                                                                ingredientData.get("fat"),
-                                                                ingredientData.get("saturatedFat"));
-                Ingredient ingredient = IngredientMapper.toIngredient(ingredientDTO);
-                ingredient.getRecipes()
-                          .add(recipe);
-                ingredientService.saveIngredient(ingredient);
-                ingredients.add(ingredient);
-            }
-            recipe.setIngredients(ingredients);
-            setRecipeNutrients(recipe);
-            recipe.setHealthScore(recipe.calculateHealthScore());
-
-            recipeService.save(recipe);
+            recipeFacade.handleSetIngredients(ingredientsPayload, recipe);
+            recipeFacade.handleSaveRecipe(recipe);
             return ResponseEntity.ok("Recipe updated successfully");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -379,61 +306,12 @@ public class RecipeController {
         }
     }
 
-    private void handleImageUpload(MultipartFile pictureFile, Recipe recipe) {
-        if (pictureFile != null && !pictureFile.isEmpty()) {
-            String uploadDirectory = "src/main/resources/static/images";
-            String uniqueFileName = UUID.randomUUID()
-                                        .toString() + "_" + pictureFile.getOriginalFilename();
-            Path uploadPath = Path.of(uploadDirectory);
-            Path filePath = uploadPath.resolve(uniqueFileName);
-            try {
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
-                Files.copy(pictureFile.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            recipe.setImage(uniqueFileName);
-        }
-    }
-
-    public void setRecipeNutrients(Recipe recipe) {
-        int servings = recipe.getServings();
-        Double calories = recipe.getCalories();
-        Double protein = recipe.getProtein();
-        Double carbohydrate = recipe.getCarbohydrate();
-        Double sugar = recipe.getSugar();
-        Double sodium = recipe.getSodium();
-        Double fat = recipe.getFat();
-        Double saturatedFat = recipe.getSaturatedFat();
-        recipe.setCalories(Math.round((calories / servings) * 10.0) / 10.0);
-        // Calculate PDV of each macronutrient by using their reference intake
-        double proteinPDV = (protein / servings) / 50 * 100;
-        proteinPDV = Math.round(proteinPDV * 10.0) / 10.0;
-        double carbohydratePDV = (carbohydrate / servings) / 260 * 100;
-        carbohydratePDV = Math.round(carbohydratePDV * 10.0) / 10.0;
-        double sugarPDV = (sugar / servings) / 90 * 100;
-        sugarPDV = Math.round(sugarPDV * 10.0) / 10.0;
-        double sodiumPDV = (sodium / 1000 / servings) / 6 * 100;
-        sodiumPDV = Math.round(sodiumPDV * 10.0) / 10.0;
-        double fatPDV = (fat / servings) / 70 * 100;
-        fatPDV = Math.round(fatPDV * 10.0) / 10.0;
-        double saturatedFatPDV = (saturatedFat / servings) / 20 * 100;
-        saturatedFatPDV = Math.round(saturatedFatPDV * 10.0) / 10.0;
-        recipe.setProtein(proteinPDV);
-        recipe.setCarbohydrate(carbohydratePDV);
-        recipe.setSugar(sugarPDV);
-        recipe.setSodium(sodiumPDV);
-        recipe.setFat(fatPDV);
-        recipe.setSaturatedFat(saturatedFatPDV);
-    }
-
     @Autowired
     private S3Service s3Service;
 
     @GetMapping("/presigned-url/healthy-recipe-images/{keyName}")
-    public ResponseEntity<Map<String, String>> getPresignedUrl(@PathVariable String keyName, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<Map<String, String>> getPresignedUrl(@PathVariable String keyName,
+                                                               @RequestHeader("Authorization") String token) {
         if (jwtService.extractId(token) == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                  .body(Map.of("error", "Unauthorized"));
@@ -461,7 +339,8 @@ public class RecipeController {
     }
 
     @DeleteMapping("/presigned-url/deleteObject/{keyName}")
-    public ResponseEntity<String> deleteObject(@PathVariable String keyName, @RequestHeader("Authorization") String token) {
+    public ResponseEntity<String> deleteObject(@PathVariable String keyName,
+                                               @RequestHeader("Authorization") String token) {
         if (jwtService.extractId(token) == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                  .body("Unauthorized");
@@ -472,31 +351,6 @@ public class RecipeController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                  .body("Error deleting object: " + e.getMessage());
-        }
-    }
-
-    @PostMapping("/uploadImage")
-    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file, @RequestHeader("Authorization") String token) {
-        if (jwtService.extractId(token) == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                 .body(Map.of("error", "Unauthorized"));
-        }
-        try {
-            String fileName = UUID.randomUUID().toString();
-            String originalFileName = file.getOriginalFilename();
-            String fileExtension = "";
-            if (originalFileName != null && originalFileName.contains(".")) {
-                fileExtension = file.getOriginalFilename()
-                                    .substring(file.getOriginalFilename()
-                                                   .lastIndexOf("."));
-            }
-            String keyName = fileName + fileExtension;
-            s3Service.uploadObject(file, keyName);
-            String fileUrl = s3Service.getObjectUrl(keyName);
-            return ResponseEntity.ok(Map.of("url", fileUrl));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                                 .body(Map.of("error", "Error uploading image: " + e.getMessage()));
         }
     }
 }
